@@ -21,21 +21,19 @@ public class JsonToJavaConverter {
     public static void main(String argv[]) throws IOException {
         JsonToJavaConverter jsonToJavaConverter=new JsonToJavaConverter();
         String json = jsonToJavaConverter.getJsonFromURL("http://arc.nick-q.mtvi.com/api/v2/editorial-content-categories/stars?apiKey=gve7v8ti");
-        jsonToJavaConverter.parseJSON(json.getBytes());
+        LinkedHashMap<String, Object> hashMap =  jsonToJavaConverter.parseJSON(json.getBytes());
+
+        System.out.println(hashMap);
     }
 
-    private void parseJSON(byte[] json)
+    private LinkedHashMap<String, Object> parseJSON(byte[] json)
     {
+        LinkedHashMap<String, Object> hashMap = null;
         try {
             JsonFactory jfactory = new JsonFactory();
-
             JsonParser jp = jfactory.createParser(json);
-
-            LinkedHashMap<String, Object> hashMap = new LinkedHashMap<String, Object>();
-
-            handleToken(hashMap, jp, jp.nextToken());
-
-            System.out.println(hashMap);
+            hashMap = new LinkedHashMap<String, Object>();
+            handleToken2(hashMap, jp, jp.nextToken());
             jp.close();
 
         } catch (JsonGenerationException e) {
@@ -51,7 +49,66 @@ public class JsonToJavaConverter {
             e.printStackTrace();
 
         }
+        return hashMap;
 
+    }
+
+    private void handleToken2(LinkedHashMap<String, Object> hashMap, JsonParser jp, JsonToken token) throws IOException {
+        if (token==null)
+            return;
+        else
+        {
+            if (token==JsonToken.START_ARRAY)
+                handleArray2(hashMap, jp);
+            if (token==JsonToken.START_OBJECT)
+                handleObject(hashMap, jp);
+            handleToken(hashMap, jp, jp.nextToken());
+
+        }
+    }
+
+
+    private void handleArray2(LinkedHashMap<String, Object> hashMap, JsonParser jp) throws IOException {
+        JsonToken current = jp.nextToken();
+        int index =0;
+        while (current!= JsonToken.END_ARRAY)
+        {
+            LinkedHashMap<String, Object> hm = new LinkedHashMap<String, Object>();
+            hashMap.put(String.valueOf(index), hm);
+            if (current==JsonToken.START_ARRAY)
+                handleArray2(hm, jp);
+            if (current==JsonToken.START_OBJECT)
+                handleObject2(hm, jp);
+            current = jp.nextToken();
+            index++;
+        }
+    }
+
+
+    private void handleObject2(LinkedHashMap<String, Object> hashMap, JsonParser jp) throws IOException {
+        JsonToken current =jp.nextToken();
+        while (current!= JsonToken.END_OBJECT)
+        {
+            String fieldname = jp.getCurrentName();
+            current = jp.nextToken();
+            if (current==JsonToken.VALUE_STRING)
+            {
+                String value = jp.getText();
+                System.out.println(fieldname + ":" + value);
+                hashMap.put(fieldname,value);
+            }
+            else
+            {
+                System.out.println(fieldname + ":");
+                LinkedHashMap<String,Object> hm = new LinkedHashMap<String, Object>();
+                hashMap.put(fieldname,hm);
+                if (current==JsonToken.START_ARRAY)
+                    handleArray2(hm, jp);
+                if (current==JsonToken.START_OBJECT)
+                    handleObject2(hm, jp);
+            }
+            current = jp.nextToken();
+        }
     }
 
     private void handleToken(LinkedHashMap<String, Object> hashMap, JsonParser jp, JsonToken token) throws IOException {
@@ -68,32 +125,6 @@ public class JsonToJavaConverter {
         }
     }
 
-    private void handleObject(LinkedHashMap<String, Object> hashMap, JsonParser jp) throws IOException {
-        JsonToken current =jp.nextToken();
-        while (current!= JsonToken.END_OBJECT)
-        {
-            String fieldname = jp.getCurrentName();
-            current = jp.nextToken();
-            if (current==JsonToken.VALUE_STRING)
-            {
-                String value = jp.getText();
-                System.out.println(fieldname + ":" + value);
-                hashMap.put(fieldname,value);
-            }
-            else
-            {
-                System.out.println(fieldname + ":");
-                //hashMap.put(fieldname,hashMap);
-            }
-            if (current==JsonToken.START_ARRAY)
-                handleArray(fieldname, hashMap, jp);
-            if (current==JsonToken.START_OBJECT)
-                handleObject(hashMap, jp);
-            current = jp.nextToken();
-        }
-    }
-
-
     private void handleArray(String name, LinkedHashMap<String, Object> hashMap, JsonParser jp) throws IOException {
         JsonToken current = jp.nextToken();
         LinkedHashMap<String, Object> hmMain = new LinkedHashMap<String, Object>();
@@ -109,6 +140,33 @@ public class JsonToJavaConverter {
                 handleObject(hm, jp);
             current = jp.nextToken();
             index++;
+        }
+    }
+
+
+    private void handleObject(LinkedHashMap<String, Object> hashMap, JsonParser jp) throws IOException {
+        //LinkedHashMap<String, Object> hm = new LinkedHashMap<String, Object>();
+        JsonToken current =jp.nextToken();
+        while (current!= JsonToken.END_OBJECT)
+        {
+            String fieldname = jp.getCurrentName();
+            current = jp.nextToken();
+            if (current==JsonToken.VALUE_STRING)
+            {
+                String value = jp.getText();
+//                System.out.println(fieldname + ":" + value);
+                hashMap.put(fieldname,value);
+            }
+            else
+            {
+//                System.out.println(fieldname + ":");
+                //hashMap.put(fieldname,hashMap);
+            }
+            if (current==JsonToken.START_ARRAY)
+                handleArray(fieldname, hashMap, jp);
+            if (current==JsonToken.START_OBJECT)
+                handleObject(hashMap, jp);
+            current = jp.nextToken();
         }
     }
 
