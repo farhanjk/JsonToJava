@@ -23,7 +23,7 @@ public class JsonToJavaConverter {
         String json = jsonToJavaConverter.getJsonFromURL("http://arc.nick-q.mtvi.com/api/v2/editorial-content-categories/stars?apiKey=gve7v8ti");
         LinkedHashMap<String, Object> hashMap =  jsonToJavaConverter.parseJSON(json.getBytes());
 
-        System.out.println(hashMap);
+        //System.out.println(hashMap);
     }
 
     private LinkedHashMap<String, Object> parseJSON(byte[] json)
@@ -32,8 +32,11 @@ public class JsonToJavaConverter {
         try {
             JsonFactory jfactory = new JsonFactory();
             JsonParser jp = jfactory.createParser(json);
-            hashMap = new LinkedHashMap<String, Object>();
-            handleToken2(hashMap, jp, jp.nextToken());
+            //hashMap = new LinkedHashMap<String, Object>();
+            //handleToken2(hashMap, jp, jp.nextToken());
+
+            parseHandler(0, jp);
+
             jp.close();
 
         } catch (JsonGenerationException e) {
@@ -51,6 +54,84 @@ public class JsonToJavaConverter {
         }
         return hashMap;
 
+    }
+
+    enum State
+    {
+        base,
+        item,
+        image,
+        asset,
+    }
+
+
+    private void parseHandler(Integer depth, JsonParser jsonParser) throws IOException {
+
+        JsonToken token = jsonParser.nextToken();
+        if (token==null)
+            return;
+        else
+        {
+            if (token==JsonToken.START_ARRAY)
+                handleArray3(depth, jsonParser);
+            if (token==JsonToken.START_OBJECT)
+                handleObject3(depth, jsonParser);
+            parseHandler(depth, jsonParser);
+
+        }
+    }
+
+    private void handleArray3(Integer depth, JsonParser jp) throws IOException {
+        depth++;
+        JsonToken current = jp.nextToken();
+        int index =0;
+        while (current!= JsonToken.END_ARRAY)
+        {
+            printDepthIndent(depth);
+            System.out.println(index + " (depth:" + depth +")");
+            if (current==JsonToken.START_ARRAY)
+                handleArray3(depth, jp);
+            if (current==JsonToken.START_OBJECT)
+                handleObject3(depth, jp);
+            current = jp.nextToken();
+            index++;
+        }
+        depth--;
+    }
+
+    private void handleObject3(Integer depth, JsonParser jp) throws IOException {
+        depth++;
+
+        JsonToken current =jp.nextToken();
+        while (current!= JsonToken.END_OBJECT)
+        {
+            String fieldname = jp.getCurrentName();
+            current = jp.nextToken();
+            if (current==JsonToken.VALUE_STRING)
+            {
+                String value = jp.getText();
+                printDepthIndent(depth);
+                System.out.println(fieldname + ":" + value);
+            }
+            else
+            {
+                printDepthIndent(depth);
+                System.out.println(fieldname + "(" + depth +"):");
+                if (current==JsonToken.START_ARRAY)
+                    handleArray3(depth, jp);
+                if (current==JsonToken.START_OBJECT)
+                    handleObject3(depth, jp);
+            }
+            current = jp.nextToken();
+        }
+
+        depth--;
+    }
+
+    private void printDepthIndent(int depth)
+    {
+        for (int i=0;i<depth;i++)
+            System.out.print("\t");
     }
 
     private void handleToken2(LinkedHashMap<String, Object> hashMap, JsonParser jp, JsonToken token) throws IOException {
